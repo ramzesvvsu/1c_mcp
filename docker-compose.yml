@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: 1c-mcp-proxy
     ports:
+      # Внешний порт берётся из .env (MCP_PORT), по умолчанию 8000; внутри контейнера всегда 8000
       - "${MCP_PORT:-8000}:8000"
     environment:
       # Мультибазовый режим: список баз берётся из примонтированного bases.json
@@ -15,10 +16,6 @@ services:
     volumes:
       # Файл со списком баз 1С (см. bases.json.example). Правится без пересборки образа.
       - ./bases.json:/app/bases.json:ro
-    # .env необязателен — нужен лишь для переопределения MCP_PORT / MCP_AUTH_MODE / MCP_LOG_LEVEL
-    env_file:
-      - path: .env
-        required: false
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5.0).raise_for_status()"]
