@@ -26,7 +26,11 @@ class OneCClient:
 		"""
 		self.base_url = base_url.rstrip('/')
 		self.service_root = service_root.strip('/')
-		self.auth = httpx.BasicAuth(username, password)
+		# Анонимная публикация 1С (без логина) — не добавляем Basic-аутентификацию
+		if username:
+			self.auth = httpx.BasicAuth(username, password or "")
+		else:
+			self.auth = None
 
 		# Используем метод для создания клиента
 		self.client = self._create_client()

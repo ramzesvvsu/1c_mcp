@@ -319,7 +319,7 @@ class MCPHttpServer:
 
 		url = f"{base.url.rstrip('/')}/hs/{base.service_root.strip('/')}/health"
 		try:
-			auth = httpx.BasicAuth(base.username or "", base.password or "")
+			auth = httpx.BasicAuth(base.username, base.password or "") if base.username else None
 			async with httpx.AsyncClient(timeout=10.0) as client:
 				response = await client.get(url, auth=auth)
 				response.raise_for_status()

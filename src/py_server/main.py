@@ -211,13 +211,13 @@ async def main():
 		logger.error("OAuth2 не поддерживается в режиме stdio. Используйте auth_mode=none.")
 		sys.exit(1)
 
-	if config.auth_mode == "none":
-		for base in config.bases:
-			if not base.username or not base.password:
-				logger.error(f"Для auth_mode=none у базы '{base.id}' обязательны логин и пароль 1С.")
-				sys.exit(1)
-	else:
+	if config.auth_mode == "oauth2":
 		logger.info("auth_mode=oauth2: логины/пароли баз игнорируются, креденшилы берутся из сессии пользователя.")
+	else:
+		# auth_mode=none: логин/пароль базы могут быть пустыми — это анонимная публикация 1С
+		for base in config.bases:
+			if not base.username:
+				logger.info(f"База '{base.id}': анонимный доступ (без логина/пароля).")
 	
 	# Отладочная информация через logger (подчиняется уровню логирования)
 	logger.debug(f"Режим работы: {args.mode}")
