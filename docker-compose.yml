@@ -7,8 +7,18 @@ services:
     container_name: 1c-mcp-proxy
     ports:
       - "${MCP_PORT:-8000}:8000"
+    environment:
+      # Мультибазовый режим: список баз берётся из примонтированного bases.json
+      - MCP_BASES_FILE=/app/bases.json
+      - MCP_AUTH_MODE=${MCP_AUTH_MODE:-none}
+      - MCP_LOG_LEVEL=${MCP_LOG_LEVEL:-INFO}
+    volumes:
+      # Файл со списком баз 1С (см. bases.json.example). Правится без пересборки образа.
+      - ./bases.json:/app/bases.json:ro
+    # .env необязателен — нужен лишь для переопределения MCP_PORT / MCP_AUTH_MODE / MCP_LOG_LEVEL
     env_file:
-      - .env
+      - path: .env
+        required: false
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5.0).raise_for_status()"]

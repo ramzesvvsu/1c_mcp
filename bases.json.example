@@ -1,0 +1,15 @@
+[
+  {
+    "id": "erp",
+    "url": "http://192.168.2.50/erp",
+    "user": "Администратор",
+    "password": "пароль_erp",
+    "service_root": "mcp"
+  },
+  {
+    "id": "buh",
+    "url": "http://192.168.2.50/buh",
+    "user": "Администратор",
+    "password": "пароль_buh"
+  }
+]

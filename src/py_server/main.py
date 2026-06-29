@@ -212,12 +212,12 @@ async def main():
 		sys.exit(1)
 
 	if config.auth_mode == "none":
-		if config.onec_username is None or config.onec_password is None:
-			logger.error("Для auth_mode=none обязательны MCP_ONEC_USERNAME и MCP_ONEC_PASSWORD.")
-			sys.exit(1)
+		for base in config.bases:
+			if not base.username or not base.password:
+				logger.error(f"Для auth_mode=none у базы '{base.id}' обязательны логин и пароль 1С.")
+				sys.exit(1)
 	else:
-		if config.onec_username or config.onec_password:
-			logger.warning("MCP_ONEC_USERNAME/MCP_ONEC_PASSWORD заданы, но будут игнорироваться при auth_mode=oauth2.")
+		logger.info("auth_mode=oauth2: логины/пароли баз игнорируются, креденшилы берутся из сессии пользователя.")
 	
 	# Отладочная информация через logger (подчиняется уровню логирования)
 	logger.debug(f"Режим работы: {args.mode}")
@@ -226,8 +226,9 @@ async def main():
 	logger.debug(f"Рабочая директория: {os.getcwd()}")
 	
 	logger.debug(f"Запуск MCP-прокси сервера в режиме: {args.mode}")
-	logger.debug(f"Подключение к 1С: {config.onec_url}")
-	logger.debug(f"Пользователь: {config.onec_username}")
+	logger.info(f"Баз 1С сконфигурировано: {len(config.bases)}")
+	for base in config.bases:
+		logger.debug(f"  база '{base.id}': {base.url} (сервис {base.service_root}, пользователь {base.username})")
 	
 	try:
 		if args.mode == "stdio":

@@ -12,7 +12,7 @@ from mcp.server.lowlevel import NotificationOptions
 from mcp import types
 
 from .onec_client import OneCClient
-from .config import Config
+from .config import Config, OneCBase
 
 
 logger = logging.getLogger(__name__)
@@ -27,31 +27,39 @@ current_onec_credentials: contextvars.ContextVar[Optional[Tuple[str, str]]] = co
 class MCPProxy:
 	"""MCP-прокси сервер для взаимодействия с 1С."""
 	
-	def __init__(self, config: Config):
+	def __init__(self, config: Config, base: OneCBase):
 		"""Инициализация прокси.
-		
+
 		Args:
 			config: Конфигурация сервера
+			base: Описание базы 1С, которую обслуживает этот прокси
 		"""
 		self.config = config
+		self.base = base
 		self.onec_client: Optional[OneCClient] = None
-		
+
+		# Имя MCP-сервера: добавляем id базы, чтобы различать endpoint'ы
+		self.server_name = (
+			config.server_name if base.id == "default"
+			else f"{config.server_name} [{base.id}]"
+		)
+
 		# Создаем MCP сервер
 		self.server = Server(
-			name=config.server_name,
+			name=self.server_name,
 			lifespan=self._lifespan
 		)
-		
+
 		# Регистрируем обработчики
 		self._register_handlers()
 	
 	@asynccontextmanager
 	async def _lifespan(self, server: Server) -> AsyncIterator[Dict[str, Any]]:
 		"""Управление жизненным циклом сервера."""
-		logger.debug(f"Инициализация MCP сервера '{self.config.server_name}' v{self.config.server_version}")
-		
+		logger.debug(f"Инициализация MCP сервера '{self.server_name}' v{self.config.server_version} (база '{self.base.id}')")
+
 		# Определяем креденшилы для текущей сессии
-		# При auth_mode=oauth2 берём из context var (per-session), иначе из конфигурации
+		# При auth_mode=oauth2 берём из context var (per-session), иначе из описания базы
 		session_creds = None
 		if self.config.auth_mode == "oauth2":
 			session_creds = current_onec_credentials.get()
@@ -61,21 +69,21 @@ class MCPProxy:
 			username, password = session_creds
 			logger.debug(f"Использую per-session креденшилы для пользователя: {username}")
 		else:
-			# Режим none - используем дефолтные креды
-			username = self.config.onec_username
-			password = self.config.onec_password
-			logger.debug(f"Режим auth_mode=none, использую дефолтные креденшилы: {username}")
-		
+			# Режим none - используем креды из описания базы
+			username = self.base.username
+			password = self.base.password
+			logger.debug(f"Режим auth_mode=none, использую креденшилы базы '{self.base.id}': {username}")
+
 		# Инициализация при запуске
 		self.onec_client = OneCClient(
-			base_url=self.config.onec_url,
+			base_url=self.base.url,
 			username=username,
 			password=password,
-			service_root=self.config.onec_service_root
+			service_root=self.base.service_root
 		)
-		
-		logger.debug(f"Подключение к 1С: {self.config.onec_url}")
-		logger.debug(f"HTTP-сервис: {self.config.onec_service_root}")
+
+		logger.debug(f"Подключение к 1С: {self.base.url}")
+		logger.debug(f"HTTP-сервис: {self.base.service_root}")
 		
 		try:
 			# Проверяем подключение к 1С
@@ -215,7 +223,7 @@ class MCPProxy:
 	def get_initialization_options(self) -> InitializationOptions:
 		"""Получить опции инициализации."""
 		return InitializationOptions(
-			server_name=self.config.server_name,
+			server_name=self.server_name,
 			server_version=self.config.server_version,
 			capabilities=self.server.get_capabilities(
 				notification_options=NotificationOptions(

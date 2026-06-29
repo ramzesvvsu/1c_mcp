@@ -18,9 +18,17 @@ async def run_stdio_server(config: Config):
 		config: Конфигурация сервера
 	"""
 	logger.info("Запуск MCP сервера в режиме stdio")
-	
+
+	# Stdio обслуживает одну базу — берём первую из списка
+	base = config.bases[0]
+	if len(config.bases) > 1:
+		logger.warning(
+			f"В режиме stdio задействована только первая база '{base.id}'. "
+			f"Для нескольких баз используйте HTTP-режим."
+		)
+
 	# Создаем прокси
-	mcp_proxy = MCPProxy(config)
+	mcp_proxy = MCPProxy(config, base)
 	
 	try:
 		# Запускаем сервер через stdio
